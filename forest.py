@@ -125,7 +125,7 @@ class ForestView(HasTraits):
         self.hb.serve()
         return False
 
-    def _plot_default(self):
+    def _forest_plot_default(self):
         plot = Plot(self.plot_data)
         plot.img_plot("forest_grid")
         plot.bounds = [0., 2.0]
