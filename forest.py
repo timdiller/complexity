@@ -81,12 +81,6 @@ class ForestView(HasTraits):
         resizable=True,
     )
 
-    def __init__(self, *args, **kwargs):
-        super(ForestView, self).__init__(*args, **kwargs)
-        # self.heartbeat_thread = threading.Thread()
-        # self.on_trait_change(self.switch_heartbeat, "run",
-        #                      dispatch=self.heartbeat_thread)
-
     def _plot_default(self):
         plot = Plot(self.plot_data)
         plot.img_plot("forest_grid")
