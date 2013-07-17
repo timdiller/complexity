@@ -81,39 +81,21 @@ class ForestView(HasTraits):
         resizable=True,
     )
 
-    def _plot_default(self):
-        plot = Plot(self.plot_data)
-        plot.img_plot("forest_grid")
-        plot.bounds = [0., 2.0]
-        return plot
-
-    def _plot_data_default(self):
-        forest_grid = np.asarray(self.forest.forest_grid, dtype=int)
-        data = ArrayPlotData(forest_grid=forest_grid)
-        return data
-
-    def _day_fired(self):
-        self._advance()
-
     def hb_listener(self, event):
         self._advance()
         event.mark_as_handled()
-
-    def _em_default(self):
-        em = EventManager()
-        return em
-
-    def _hb_default(self):
-        return Heartbeat(interval=0.05, event_manager=self.em)
 
     def _advance(self):
         self.forest.advance_one_day()
         self.plot_data.set_data("forest_grid", self.forest.forest_grid +
                                 2 * self.forest.forest_fires)
 
-    def _run_default(self):
-        self.hb.serve()
-        return False
+    def _day_fired(self):
+        self._advance()
+
+    def _em_default(self):
+        em = EventManager()
+        return em
 
     def _get_run_label(self):
         if self.run:
@@ -121,6 +103,9 @@ class ForestView(HasTraits):
         else:
             label = "Run"
         return label
+
+    def _hb_default(self):
+        return Heartbeat(interval=0.05, event_manager=self.em)
 
     def _run_button_fired(self):
         if self.run:
@@ -135,6 +120,21 @@ class ForestView(HasTraits):
             self.em.connect(HeartbeatEvent, self.hb_listener)
         else:
             self.em.disconnect(HeartbeatEvent, self.hb_listener)
+
+    def _run_default(self):
+        self.hb.serve()
+        return False
+
+    def _plot_default(self):
+        plot = Plot(self.plot_data)
+        plot.img_plot("forest_grid")
+        plot.bounds = [0., 2.0]
+        return plot
+
+    def _plot_data_default(self):
+        forest_grid = np.asarray(self.forest.forest_grid, dtype=int)
+        data = ArrayPlotData(forest_grid=forest_grid)
+        return data
 
 
 if __name__ == "__main__":
