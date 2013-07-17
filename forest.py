@@ -65,14 +65,14 @@ class ForestView(HasTraits):
     day = Button("Advance 1 Day")
     p_sapling = DelegatesTo("forest", "p_sapling")
     p_lightning = DelegatesTo("forest", "p_lightning")
-    plot = Instance(Plot)
+    forest_plot = Instance(Plot)
     plot_data = Instance(ArrayPlotData)
     run_label = Property(String, depends_on="run")
     run_button = Button
     run = Bool
 
     traits_view = View(
-        Item("plot", editor=ComponentEditor(), show_label=False),
+        Item("forest_plot", editor=ComponentEditor(), show_label=False),
         Item("p_sapling", editor=RangeEditor(), label="p sapling"),
         Item("p_lightning", editor=RangeEditor(), label="p lightning"),
         Item("run_button", editor=ButtonEditor(label_value="run_label"),
