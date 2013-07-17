@@ -1,4 +1,4 @@
-import threading
+# import threading
 
 import numpy as np
 
@@ -6,8 +6,8 @@ from chaco.api import ArrayPlotData, Plot
 from enable.api import ComponentEditor
 from encore.events.api import EventManager, HeartbeatEvent, Heartbeat
 from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo,  # Float,
-                        Instance, Int, Range)
-from traitsui.api import Item, RangeEditor, View
+                        Instance, Int, Property, Range, String)
+from traitsui.api import ButtonEditor, Item, RangeEditor, View
 
 
 class Forest(HasTraits):
@@ -63,15 +63,20 @@ class ForestView(HasTraits):
     hb = Instance(Heartbeat)
     forest = Instance(Forest)
     day = Button("Advance 1 Day")
+    p_sapling = DelegatesTo("forest", "p_sapling")
     p_lightning = DelegatesTo("forest", "p_lightning")
     plot = Instance(Plot)
     plot_data = Instance(ArrayPlotData)
+    run_label = Property(String, depends_on="run")
+    run_button = Button
     run = Bool
 
     traits_view = View(
         Item("plot", editor=ComponentEditor(), show_label=False),
+        Item("p_sapling", editor=RangeEditor(), label="p sapling"),
         Item("p_lightning", editor=RangeEditor(), label="p lightning"),
-        Item("run"),
+        Item("run_button", editor=ButtonEditor(label_value="run_label"),
+             show_label=False),
         Item("day", show_label=False),
         resizable=True,
     )
@@ -84,8 +89,8 @@ class ForestView(HasTraits):
 
     def _plot_default(self):
         plot = Plot(self.plot_data)
-        renderer = plot.img_plot("forest_grid")
-        # renderer.set_color_scale
+        plot.img_plot("forest_grid")
+        plot.bounds = [0., 2.0]
         return plot
 
     def _plot_data_default(self):
@@ -100,6 +105,13 @@ class ForestView(HasTraits):
         self._advance()
         event.mark_as_handled()
 
+    def _em_default(self):
+        em = EventManager()
+        return em
+
+    def _hb_default(self):
+        return Heartbeat(interval=0.05, event_manager=self.em)
+
     def _advance(self):
         self.forest.advance_one_day()
         self.plot_data.set_data("forest_grid", self.forest.forest_grid +
@@ -109,12 +121,20 @@ class ForestView(HasTraits):
         self.hb.serve()
         return False
 
-    def _em_default(self):
-        em = EventManager()
-        return em
+    def _get_run_label(self):
+        if self.run:
+            label = "Stop"
+        else:
+            label = "Run"
+        return label
 
-    def _hb_default(self):
-        return Heartbeat(interval=0.1, event_manager=self.em)
+    def _run_button_fired(self):
+        if self.run:
+            self.run = False
+            # self.run_label = "Run"
+        else:
+            self.run = True
+            # self.run_label = "Stop"
 
     def _run_changed(self):
         if self.run:
