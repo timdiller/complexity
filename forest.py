@@ -20,7 +20,7 @@ class Forest(HasTraits):
     size_x = Int(100)
     size_y = Int(100)
 
-    def _forest_grid_default(self):
+    def _forest_trees_default(self):
         return np.zeros((self.size_x, self.size_y))
 
     def _forest_fires_default(self):
@@ -34,7 +34,7 @@ class Forest(HasTraits):
     def grow_trees(self):
         growth_sites = np.random.uniform(size=(self.size_x, self.size_y)) <= \
             self.p_sapling
-        self.forest_grid[growth_sites] = True
+        self.forest_trees[growth_sites] = True
 
     def burn_trees(self):
         neighbor_on_fire = np.zeros((self.size_x, self.size_y), dtype=bool)
@@ -55,9 +55,9 @@ class Forest(HasTraits):
     def start_fires(self):
         fire_sites = np.logical_and(np.random.uniform(
             size=(self.size_x, self.size_y)) <= self.p_lightning,
-            self.forest_grid)
         # print "{} new fire sites".format(np.sum(fire_sites))
         self.forest_fires[fire_sites] = True
+            self.forest_trees)
 
 
 class ForestView(HasTraits):
@@ -99,8 +99,8 @@ class ForestView(HasTraits):
 
     def update_ratio_history(self):
         self.ratio_history[1:] = self.ratio_history[:-1]
-        self.ratio_history[0] = float(np.sum(self.forest.forest_grid)) / \
-            self.forest.forest_grid.size
+        self.tree_history[0] = float(np.sum(self.forest.forest_trees)) / \
+            self.forest.forest_trees.size
 
     def update_time(self):
         self.time[1:] = self.time[:-1]
