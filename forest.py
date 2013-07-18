@@ -14,8 +14,8 @@ history_length = 3000
 
 
 class Forest(HasTraits):
-    p_lightning = Range(0., 0.05, 1.e-3)
-    p_sapling = Range(0., 0.05, 0.002)
+    p_lightning = Range(0., 0.05, 5.e-6)
+    p_sapling = Range(0., 0.05, 0.0025)
     forest_trees = Array(dtype=bool)
     forest_fires = Array(dtype=bool)
     size_x = Int(150)
