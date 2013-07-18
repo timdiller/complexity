@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from chaco.api import ArrayPlotData, Plot
+from chaco.api import ArrayPlotData, Plot, VPlotContainer
 from enable.api import ComponentEditor
 from encore.events.api import EventManager, HeartbeatEvent, Heartbeat
 from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo,  # Float,
@@ -18,8 +18,8 @@ class Forest(HasTraits):
     p_sapling = Range(0., 0.05, 0.002)
     forest_trees = Array(dtype=bool)
     forest_fires = Array(dtype=bool)
-    size_x = Int(100)
-    size_y = Int(100)
+    size_x = Int(150)
+    size_y = Int(150)
 
     def _forest_trees_default(self):
         return np.zeros((self.size_x, self.size_y))
@@ -66,7 +66,9 @@ class ForestView(HasTraits):
     p_lightning = DelegatesTo("forest", "p_lightning")
     forest_plot = Instance(Plot)
     forest_image = Property(Array, depends_on="forest")
+    time_plots = Instance(VPlotContainer)
     tree_time_plot = Instance(Plot)
+    fire_time_plot = Instance(Plot)
     tree_history = Array(dtype=float)
     fire_history = Array(dtype=float)
     time = Array(dtype=int)
@@ -91,7 +93,8 @@ class ForestView(HasTraits):
                 ),
             ),
             VGroup(
-                Item("tree_time_plot", editor=ComponentEditor(), show_label=False),
+                Item("time_plots", editor=ComponentEditor(),
+                     show_label=False),
                 Item("run_button",
                      editor=ButtonEditor(label_value="run_label"),
                      show_label=False),
@@ -140,8 +143,7 @@ class ForestView(HasTraits):
         return np.zeros((history_length, ), dtype=float)
 
     def _fire_time_plot_default(self):
-        plot = Plot(self.plot_data)
-        plot.plot(["time", "tree_history"])
+        plot = Plot(self.plot_data, title="Fractional area with fires")
         plot.plot(["time", "fire_history"])
         return plot
 
@@ -175,9 +177,6 @@ class ForestView(HasTraits):
                              time=self.time)
         return data
 
-    def _tree_history_default(self):
-        return np.zeros((history_length, ), dtype=float)
-
     def _run_button_fired(self):
         if self.run:
             self.run = False
@@ -194,10 +193,16 @@ class ForestView(HasTraits):
         self.hb.serve()
         return False
 
+    def _time_plots_default(self):
+        return VPlotContainer(self.fire_time_plot, self.tree_time_plot,
+                              spacing=1.)
+
+    def _tree_history_default(self):
+        return np.zeros((history_length, ), dtype=float)
+
     def _tree_time_plot_default(self):
-        plot = Plot(self.plot_data)
+        plot = Plot(self.plot_data, title="Fractional area covered by trees")
         plot.plot(["time", "tree_history"])
-        plot.plot(["time", "fire_history"])
         return plot
 
     def _time_default(self):
