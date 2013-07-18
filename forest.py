@@ -6,16 +6,17 @@ from chaco.api import ArrayPlotData, Plot
 from enable.api import ComponentEditor
 from encore.events.api import EventManager, HeartbeatEvent, Heartbeat
 from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo,  # Float,
-                        Instance, Int, Property, Range, String)
-from traitsui.api import ButtonEditor, Item, RangeEditor, View
+                        Instance, Int, Property, Range,
+                        String)
+from traitsui.api import ButtonEditor, HGroup, Item, VGroup, View
 
-history_length = 500
+history_length = 3000
 
 
 class Forest(HasTraits):
-    p_lightning = Range(0., 1., 0.01)
-    p_sapling = Range(0., 1., 0.02)
-    forest_grid = Array(dtype=bool)
+    p_lightning = Range(0., 0.05, 1.e-3)
+    p_sapling = Range(0., 0.05, 0.002)
+    forest_trees = Array(dtype=bool)
     forest_fires = Array(dtype=bool)
     size_x = Int(100)
     size_y = Int(100)
@@ -37,27 +38,23 @@ class Forest(HasTraits):
         self.forest_trees[growth_sites] = True
 
     def burn_trees(self):
-        neighbor_on_fire = np.zeros((self.size_x, self.size_y), dtype=bool)
-        north = self.forest_fires[:-2, 1:-1]
-        south = self.forest_fires[2:, 1:-1]
-        east = self.forest_fires[1:-1, :-2]
-        west = self.forest_fires[1:-1, 2:]
-        neighbor_on_fire[1:-1, 1:-1] = np.logical_or(
+        fires = np.zeros((self.size_x + 2, self.size_y + 2), dtype=bool)
+        fires[1:-1, 1:-1] = self.forest_fires
+        north = fires[:-2, 1:-1]
+        south = fires[2:, 1:-1]
+        east = fires[1:-1, :-2]
+        west = fires[1:-1, 2:]
+        neighbor_on_fire = np.logical_or(
             north, np.logical_or(south, np.logical_or(east, west)))
-        # print "{} squares with neighbors on fire".format(
-        #     np.sum(neighbor_on_fire))
-        new_fires = np.logical_and(neighbor_on_fire, self.forest_grid)
-        # print "{} new fires by spreading".format(np.sum(new_fires))
-        self.forest_grid[self.forest_fires] = False
-        # print "{} trees burned down".format(np.sum(self.forest_fires))
+        new_fires = np.logical_and(neighbor_on_fire, self.forest_trees)
+        self.forest_trees[self.forest_fires] = False
         self.forest_fires = new_fires
 
     def start_fires(self):
-        fire_sites = np.logical_and(np.random.uniform(
+        lightning_strikes = np.logical_and(np.random.uniform(
             size=(self.size_x, self.size_y)) <= self.p_lightning,
-        # print "{} new fire sites".format(np.sum(fire_sites))
-        self.forest_fires[fire_sites] = True
             self.forest_trees)
+        self.forest_fires[lightning_strikes] = True
 
 
 class ForestView(HasTraits):
@@ -68,8 +65,9 @@ class ForestView(HasTraits):
     p_sapling = DelegatesTo("forest", "p_sapling")
     p_lightning = DelegatesTo("forest", "p_lightning")
     forest_plot = Instance(Plot)
-    time_plot = Instance(Plot)
-    ratio_history = Array(dtype=float)
+    forest_image = Property(Array, depends_on="forest")
+    tree_time_plot = Instance(Plot)
+    tree_history = Array(dtype=float)
     fire_history = Array(dtype=float)
     time = Array(dtype=int)
     plot_data = Instance(ArrayPlotData)
@@ -78,13 +76,28 @@ class ForestView(HasTraits):
     run = Bool
 
     traits_view = View(
-        Item("forest_plot", editor=ComponentEditor(), show_label=False),
-        Item("time_plot", editor=ComponentEditor(), show_label=False),
-        Item("p_sapling", editor=RangeEditor(), label="p sapling"),
-        Item("p_lightning", editor=RangeEditor(), label="p lightning"),
-        Item("run_button", editor=ButtonEditor(label_value="run_label"),
-             show_label=False),
-        Item("day", show_label=False),
+        HGroup(
+            VGroup(
+                Item("forest_plot",
+                     editor=ComponentEditor(),
+                     show_label=False),
+                HGroup(
+                    Item(label="trees"),
+                    Item("p_sapling", show_label=False),
+                ),
+                HGroup(
+                    Item(label="fires"),
+                    Item("p_lightning", show_label=False),
+                ),
+            ),
+            VGroup(
+                Item("tree_time_plot", editor=ComponentEditor(), show_label=False),
+                Item("run_button",
+                     editor=ButtonEditor(label_value="run_label"),
+                     show_label=False),
+                Item("day", show_label=False),
+            ),
+        ),
         resizable=True,
     )
 
@@ -97,8 +110,8 @@ class ForestView(HasTraits):
         self.fire_history[0] = float(np.sum(self.forest.forest_fires)) / \
             self.forest.forest_fires.size
 
-    def update_ratio_history(self):
-        self.ratio_history[1:] = self.ratio_history[:-1]
+    def update_tree_history(self):
+        self.tree_history[1:] = self.tree_history[:-1]
         self.tree_history[0] = float(np.sum(self.forest.forest_trees)) / \
             self.forest.forest_trees.size
 
@@ -109,12 +122,11 @@ class ForestView(HasTraits):
     def _advance(self):
         self.forest.advance_one_day()
         self.update_fire_history()
-        self.update_ratio_history()
+        self.update_tree_history()
         self.update_time()
-        self.plot_data.set_data("forest_grid", self.forest.forest_grid +
-                                2 * self.forest.forest_fires)
+        self.plot_data.set_data("forest_image", self.forest_image)
         self.plot_data.set_data("fire_history", self.fire_history)
-        self.plot_data.set_data("ratio_history", self.ratio_history)
+        self.plot_data.set_data("tree_history", self.tree_history)
         self.plot_data.set_data("time", self.time)
 
     def _day_fired(self):
@@ -127,6 +139,25 @@ class ForestView(HasTraits):
     def _fire_history_default(self):
         return np.zeros((history_length, ), dtype=float)
 
+    def _fire_time_plot_default(self):
+        plot = Plot(self.plot_data)
+        plot.plot(["time", "tree_history"])
+        plot.plot(["time", "fire_history"])
+        return plot
+
+    def _forest_plot_default(self):
+        plot = Plot(self.plot_data)
+        plot.img_plot("forest_image")
+        plot.bounds = [0., 2.0]
+        return plot
+
+    def _get_forest_image(self):
+        image = np.zeros((self.forest.size_x, self.forest.size_y, 3),
+                         dtype=np.uint8)
+        image[:, :, 0] = 255 * self.forest.forest_fires
+        image[:, :, 1] = 128 * self.forest.forest_trees
+        return image
+
     def _get_run_label(self):
         if self.run:
             label = "Stop"
@@ -137,16 +168,21 @@ class ForestView(HasTraits):
     def _hb_default(self):
         return Heartbeat(interval=0.05, event_manager=self.em)
 
-    def _ratio_history_default(self):
+    def _plot_data_default(self):
+        data = ArrayPlotData(forest_image=self.forest_image,
+                             tree_history=self.tree_history,
+                             fire_history=self.fire_history,
+                             time=self.time)
+        return data
+
+    def _tree_history_default(self):
         return np.zeros((history_length, ), dtype=float)
 
     def _run_button_fired(self):
         if self.run:
             self.run = False
-            # self.run_label = "Run"
         else:
             self.run = True
-            # self.run_label = "Stop"
 
     def _run_changed(self):
         if self.run:
@@ -158,23 +194,9 @@ class ForestView(HasTraits):
         self.hb.serve()
         return False
 
-    def _plot_data_default(self):
-        forest_grid = np.asarray(self.forest.forest_grid, dtype=int)
-        data = ArrayPlotData(forest_grid=forest_grid,
-                             ratio_history=self.ratio_history,
-                             fire_history=self.fire_history,
-                             time=self.time)
-        return data
-
-    def _forest_plot_default(self):
+    def _tree_time_plot_default(self):
         plot = Plot(self.plot_data)
-        plot.img_plot("forest_grid")
-        plot.bounds = [0., 2.0]
-        return plot
-
-    def _time_plot_default(self):
-        plot = Plot(self.plot_data)
-        plot.plot(["time", "ratio_history"])
+        plot.plot(["time", "tree_history"])
         plot.plot(["time", "fire_history"])
         return plot
 
@@ -183,11 +205,6 @@ class ForestView(HasTraits):
 
 
 if __name__ == "__main__":
-    # from matplotlib import pyplot as plt
     f = Forest()
     fv = ForestView(forest=f)
     fv.configure_traits()
-    # for i in range(50):
-    #     f.advance_one_day()
-    # plt.matshow(f.forest_grid)
-    # plt.show()
