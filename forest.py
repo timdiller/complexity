@@ -5,7 +5,7 @@ import numpy as np
 from chaco.api import ArrayPlotData, Plot, VPlotContainer
 from enable.api import ComponentEditor
 from encore.events.api import EventManager, HeartbeatEvent, Heartbeat
-from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo,  # Float,
+from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo, Enum,
                         Instance, Int, Property, Range,
                         String)
 from traitsui.api import ButtonEditor, HGroup, Item, VGroup, View
@@ -69,6 +69,12 @@ class ForestView(HasTraits):
     time_plots = Instance(VPlotContainer)
     tree_time_plot = Instance(Plot)
     fire_time_plot = Instance(Plot)
+    density_function = Property(Array)
+    # tree_density_function = Property(Array, depends_on="tree_history")
+    histograms = Instance(Plot)
+    which_histogram = Enum("trees", "fire")
+    trait_to_histogram = Property(depends_on="which_histogram")
+    fractions = Property(Array(dtype=float))
     tree_history = Array(dtype=float)
     fire_history = Array(dtype=float)
     time = Array(dtype=int)
@@ -95,10 +101,13 @@ class ForestView(HasTraits):
             VGroup(
                 Item("time_plots", editor=ComponentEditor(),
                      show_label=False),
-                Item("run_button",
-                     editor=ButtonEditor(label_value="run_label"),
-                     show_label=False),
-                Item("day", show_label=False),
+                HGroup(
+                    Item("run_button",
+                         editor=ButtonEditor(label_value="run_label"),
+                         show_label=False),
+                    Item("which_histogram", show_label=False),
+                    Item("day", show_label=False),
+                ),
             ),
         ),
         resizable=True,
@@ -130,7 +139,12 @@ class ForestView(HasTraits):
         self.plot_data.set_data("forest_image", self.forest_image)
         self.plot_data.set_data("fire_history", self.fire_history)
         self.plot_data.set_data("tree_history", self.tree_history)
+        # self.plot_data.set_data("fire_density_function",
+        #                         self.fire_density_function)
+        self.plot_data.set_data("density_function",
+                                self.density_function)
         self.plot_data.set_data("time", self.time)
+        self.plot_data.set_data("fractions", self.fractions)
 
     def _day_fired(self):
         self._advance()
@@ -153,6 +167,22 @@ class ForestView(HasTraits):
         plot.bounds = [0., 2.0]
         return plot
 
+    def _get_fractions(self):
+        data = self.trait_to_histogram
+        return np.linspace(data.min(), data.max(), 50)
+
+    def _get_fire_density_function(self):
+        hist, bins = np.histogram(self.fire_history, bins=self.fractions,
+                                  normed=True)
+        return hist / np.sum(hist)
+
+    def _get_density_function(self):
+        time_since_start = self.time > 0
+        data = self.trait_to_histogram
+        hist, bins = np.histogram(data[time_since_start],
+                                  bins=self.fractions, normed=True)
+        return hist / np.sum(hist)
+
     def _get_forest_image(self):
         image = np.zeros((self.forest.size_x, self.forest.size_y, 3),
                          dtype=np.uint8)
@@ -167,13 +197,27 @@ class ForestView(HasTraits):
             label = "Run"
         return label
 
+    def _get_trait_to_histogram(self):
+        trait_to_histogram = {
+            "trees": self.tree_history,
+            "fire": self.fire_history,
+        }
+        return trait_to_histogram[self.which_histogram]
+
     def _hb_default(self):
-        return Heartbeat(interval=0.05, event_manager=self.em)
+        return Heartbeat(interval=0.02, event_manager=self.em)
+
+    def _histograms_default(self):
+        plot = Plot(self.plot_data)
+        plot.plot(["fractions", "density_function"], color="green")
+        return plot
 
     def _plot_data_default(self):
         data = ArrayPlotData(forest_image=self.forest_image,
                              tree_history=self.tree_history,
                              fire_history=self.fire_history,
+                             fractions=self.fractions,
+                             density_function=self.density_function,
                              time=self.time)
         return data
 
@@ -195,7 +239,7 @@ class ForestView(HasTraits):
 
     def _time_plots_default(self):
         return VPlotContainer(self.fire_time_plot, self.tree_time_plot,
-                              spacing=1.)
+                              self.histograms, spacing=0.)
 
     def _tree_history_default(self):
         return np.zeros((history_length, ), dtype=float)
