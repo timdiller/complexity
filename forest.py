@@ -1,6 +1,6 @@
-# import threading
-
 import numpy as np
+from numpy.random import uniform
+from scipy.ndimage.measurements import label
 
 from chaco.api import ArrayPlotData, Plot, VPlotContainer
 from enable.api import ComponentEditor
@@ -12,6 +12,8 @@ from traitsui.api import ButtonEditor, HGroup, Item, VGroup, View
 
 history_length = 3000
 
+def randbool(nx, ny, p):
+    return uniform(size=(nx, ny)) <= p
 
 class Forest(HasTraits):
     p_lightning = Range(0., 0.01, 5.e-6)
@@ -29,12 +31,11 @@ class Forest(HasTraits):
 
     def advance_one_day(self):
         self.grow_trees()
-        self.burn_trees()
         self.start_fires()
+        self.burn_trees()
 
     def grow_trees(self):
-        growth_sites = np.random.uniform(size=(self.size_x, self.size_y)) <= \
-            self.p_sapling
+        growth_sites = randbool(self.size_x, self.size_y, self.p_sapling)
         self.forest_trees[growth_sites] = True
 
     def burn_trees(self):
@@ -44,17 +45,29 @@ class Forest(HasTraits):
         south = fires[2:, 1:-1]
         east = fires[1:-1, :-2]
         west = fires[1:-1, 2:]
-        neighbor_on_fire = np.logical_or(
-            north, np.logical_or(south, np.logical_or(east, west)))
-        new_fires = np.logical_and(neighbor_on_fire, self.forest_trees)
+        new_fires = (north | south | east | west) & self.forest_trees
         self.forest_trees[self.forest_fires] = False
         self.forest_fires = new_fires
 
     def start_fires(self):
-        lightning_strikes = np.logical_and(np.random.uniform(
-            size=(self.size_x, self.size_y)) <= self.p_lightning,
-            self.forest_trees)
+        lightning_strikes = randbool(self.size_x, self.size_y, self.p_lightning) & self.forest_trees
         self.forest_fires[lightning_strikes] = True
+
+
+class InstantBurnForest(Forest):
+
+    def advance_one_day(self):
+        self.grow_trees()
+        self.strike_and_burn()
+
+    def strike_and_burn(self):
+        strikes = randbool(self.size_x, self.size_y, self.p_lightning) & self.forest_trees
+        groves, num_groves = label(self.forest_trees)
+        fires = set(groves[strikes])
+        self.forest_fires.fill(False)
+        for fire in fires:
+            self.forest_fires[groves == fire] = True
+        self.forest_trees[self.forest_fires] = False
 
 
 class ForestView(HasTraits):
@@ -252,6 +265,6 @@ class ForestView(HasTraits):
 
 
 if __name__ == "__main__":
-    f = Forest()
+    f = InstantBurnForest()
     fv = ForestView(forest=f)
     fv.configure_traits()
