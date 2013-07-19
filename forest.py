@@ -10,8 +10,9 @@ from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo, Enum,
                         String)
 from traitsui.api import ButtonEditor, HGroup, Item, VGroup, View
 
-history_length = 3000
+from scipy.ndimage.measurements import label
 
+history_length = 3000
 
 class Forest(HasTraits):
     p_lightning = Range(0., 0.05, 5.e-6)
@@ -29,8 +30,8 @@ class Forest(HasTraits):
 
     def advance_one_day(self):
         self.grow_trees()
-        self.burn_trees()
         self.start_fires()
+        self.burn_trees()
 
     def grow_trees(self):
         growth_sites = np.random.uniform(size=(self.size_x, self.size_y)) <= \
@@ -55,6 +56,18 @@ class Forest(HasTraits):
             size=(self.size_x, self.size_y)) <= self.p_lightning,
             self.forest_trees)
         self.forest_fires[lightning_strikes] = True
+
+
+class InstantBurnForest(Forest):
+
+    def burn_trees(self):
+        groves, num_groves = label(self.forest_trees)
+        fires = set(groves[self.forest_fires])
+        fires.discard(0)
+        self.forest_fires.fill(False)
+        for fire in fires:
+            self.forest_fires[groves == fire] = True
+        self.forest_trees[self.forest_fires] = False
 
 
 class ForestView(HasTraits):
@@ -254,6 +267,6 @@ class ForestView(HasTraits):
 
 
 if __name__ == "__main__":
-    f = Forest()
+    f = InstantBurnForest()
     fv = ForestView(forest=f)
     fv.configure_traits()
