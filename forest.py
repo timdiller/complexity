@@ -14,8 +14,8 @@ history_length = 3000
 
 
 class Forest(HasTraits):
-    p_lightning = Range(0., 0.05, 5.e-6)
-    p_sapling = Range(0., 0.05, 0.0025)
+    p_lightning = Range(0., 0.01, 5.e-6)
+    p_sapling = Range(0., 0.01, 0.0025)
     forest_trees = Array(dtype=bool)
     forest_fires = Array(dtype=bool)
     size_x = Int(150)
@@ -139,8 +139,6 @@ class ForestView(HasTraits):
         self.plot_data.set_data("forest_image", self.forest_image)
         self.plot_data.set_data("fire_history", self.fire_history)
         self.plot_data.set_data("tree_history", self.tree_history)
-        # self.plot_data.set_data("fire_density_function",
-        #                         self.fire_density_function)
         self.plot_data.set_data("density_function",
                                 self.density_function)
         self.plot_data.set_data("time", self.time)
