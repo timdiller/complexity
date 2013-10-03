@@ -18,8 +18,8 @@ def randbool(nx, ny, p):
 
 
 class Forest(HasTraits):
-    p_lightning = Range(0., 0.01, 5.e-6)
-    p_sapling = Range(0., 0.01, 0.0025)
+    p_lightning = Range(0., 0.0005, 5.e-6)
+    p_sapling = Range(0., 0.005, 0.0025)
     forest_trees = Array(dtype=bool)
     forest_fires = Array(dtype=bool)
     size_x = Int(150)
