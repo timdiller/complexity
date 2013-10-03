@@ -12,8 +12,10 @@ from traitsui.api import ButtonEditor, HGroup, Item, VGroup, View
 
 history_length = 3000
 
+
 def randbool(nx, ny, p):
     return uniform(size=(nx, ny)) <= p
+
 
 class Forest(HasTraits):
     p_lightning = Range(0., 0.01, 5.e-6)
@@ -50,7 +52,8 @@ class Forest(HasTraits):
         self.forest_fires = new_fires
 
     def start_fires(self):
-        lightning_strikes = randbool(self.size_x, self.size_y, self.p_lightning) & self.forest_trees
+        lightning_strikes = randbool(self.size_x, self.size_y,
+                                     self.p_lightning) & self.forest_trees
         self.forest_fires[lightning_strikes] = True
 
 
@@ -61,7 +64,8 @@ class InstantBurnForest(Forest):
         self.strike_and_burn()
 
     def strike_and_burn(self):
-        strikes = randbool(self.size_x, self.size_y, self.p_lightning) & self.forest_trees
+        strikes = randbool(self.size_x, self.size_y,
+                           self.p_lightning) & self.forest_trees
         groves, num_groves = label(self.forest_trees)
         fires = set(groves[strikes])
         self.forest_fires.fill(False)
@@ -71,29 +75,33 @@ class InstantBurnForest(Forest):
 
 
 class ForestView(HasTraits):
-    em = Instance(EventManager)
-    hb = Instance(Heartbeat)
-    forest = Instance(Forest)
+    # UI Elements
     day = Button("Advance 1 Day")
-    p_sapling = DelegatesTo("forest", "p_sapling")
-    p_lightning = DelegatesTo("forest", "p_lightning")
+    histograms = Instance(Plot)
+    fire_time_plot = Instance(Plot)
     forest_plot = Instance(Plot)
     forest_image = Property(Array, depends_on="forest")
-    time_plots = Instance(VPlotContainer)
-    tree_time_plot = Instance(Plot)
-    fire_time_plot = Instance(Plot)
-    density_function = Property(Array)
-    # tree_density_function = Property(Array, depends_on="tree_history")
-    histograms = Instance(Plot)
-    which_histogram = Enum("trees", "fire")
-    trait_to_histogram = Property(depends_on="which_histogram")
-    fractions = Property(Array(dtype=float))
-    tree_history = Array(dtype=float)
-    fire_history = Array(dtype=float)
-    time = Array(dtype=int)
-    plot_data = Instance(ArrayPlotData)
     run_label = Property(String, depends_on="run")
     run_button = Button
+    time_plots = Instance(VPlotContainer)
+    trait_to_histogram = Property(depends_on="which_histogram")
+    tree_time_plot = Instance(Plot)
+    which_histogram = Enum("trees", "fire")
+
+    # ModelView Elements
+    density_function = Property(Array)
+    fractions = Property(Array(dtype=float))
+    fire_history = Array(dtype=float)
+    forest = Instance(Forest)
+    p_sapling = DelegatesTo("forest", "p_sapling")
+    p_lightning = DelegatesTo("forest", "p_lightning")
+    plot_data = Instance(ArrayPlotData)
+    time = Array(dtype=int)
+    tree_history = Array(dtype=float)
+
+    # Control Elements
+    em = Instance(EventManager)
+    hb = Instance(Heartbeat)
     run = Bool
 
     traits_view = View(
@@ -265,6 +273,7 @@ class ForestView(HasTraits):
 
 
 if __name__ == "__main__":
-    f = InstantBurnForest()
+    # f = InstantBurnForest()
+    f = Forest()
     fv = ForestView(forest=f)
     fv.configure_traits()
