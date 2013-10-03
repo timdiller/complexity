@@ -218,7 +218,7 @@ class ForestView(HasTraits):
         return trait_to_histogram[self.which_histogram]
 
     def _hb_default(self):
-        return Heartbeat(interval=0.02, event_manager=self.em)
+        return Heartbeat(interval=0.005, event_manager=self.em)
 
     def _histograms_default(self):
         plot = Plot(self.plot_data)
@@ -267,7 +267,7 @@ class ForestView(HasTraits):
 
 
 if __name__ == "__main__":
-    # f = InstantBurnForest()
-    f = Forest()
+    f = InstantBurnForest()
+    # f = Forest()
     fv = ForestView(forest=f)
     fv.configure_traits()
