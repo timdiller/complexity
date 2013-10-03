@@ -107,17 +107,11 @@ class ForestView(HasTraits):
     traits_view = View(
         HGroup(
             VGroup(
-                Item("forest_plot",
-                     editor=ComponentEditor(),
-                     show_label=False),
-                HGroup(
-                    Item(label="trees"),
-                    Item("p_sapling", show_label=False),
-                ),
-                HGroup(
-                    Item(label="fires"),
-                    Item("p_lightning", show_label=False),
-                ),
+                VGroup(Item("forest_plot",
+                       editor=ComponentEditor(),
+                       show_label=False),),
+                Item("p_sapling", label="trees"),
+                Item("p_lightning", label="fires"),
             ),
             VGroup(
                 Item("time_plots", editor=ComponentEditor(),
