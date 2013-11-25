@@ -1,3 +1,4 @@
+# Source at https://github.com/timdiller/complexity/blob/master/forest.py
 import numpy as np
 from numpy.random import uniform
 from scipy.ndimage.measurements import label
@@ -187,14 +188,20 @@ class ForestView(HasTraits):
     def _get_fire_density_function(self):
         hist, bins = np.histogram(self.fire_history, bins=self.fractions,
                                   normed=True)
-        return hist / np.sum(hist)
+        tot = np.sum(hist)
+        if tot > 0:
+            hist /= tot
+        return hist
 
     def _get_density_function(self):
         time_since_start = self.time > 0
         data = self.trait_to_histogram
         hist, bins = np.histogram(data[time_since_start],
                                   bins=self.fractions, normed=True)
-        return hist / np.sum(hist)
+        tot = np.sum(hist)
+        if tot > 0:
+            hist /= tot
+        return hist
 
     def _get_forest_image(self):
         image = np.zeros((self.forest.size_x, self.forest.size_y, 3),
@@ -263,7 +270,9 @@ class ForestView(HasTraits):
         return plot
 
     def _time_default(self):
-        return np.zeros((history_length, ), dtype=int)
+        time = np.zeros((history_length, ), dtype=int)
+        time[0] = 1
+        return time
 
 
 if __name__ == "__main__":
