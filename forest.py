@@ -5,7 +5,7 @@ from scipy.ndimage.measurements import label
 
 from chaco.api import ArrayPlotData, Plot, VPlotContainer
 from enable.api import ComponentEditor
-from encore.events.api import EventManager, HeartbeatEvent, Heartbeat
+from pyface.timer.api import Timer
 from traits.api import (HasTraits, Array, Bool, Button, DelegatesTo, Enum,
                         Instance, Int, Property, Range,
                         String)
@@ -100,9 +100,6 @@ class ForestView(HasTraits):
     time = Array(dtype=int)
     tree_history = Array(dtype=float)
 
-    # Control Elements
-    em = Instance(EventManager)
-    hb = Instance(Heartbeat)
     run = Bool
 
     traits_view = View(
@@ -128,10 +125,6 @@ class ForestView(HasTraits):
         ),
         resizable=True,
     )
-
-    def hb_listener(self, event):
-        self._advance()
-        event.mark_as_handled()
 
     def update_fire_history(self):
         self.fire_history[1:] = self.fire_history[:-1]
@@ -162,10 +155,6 @@ class ForestView(HasTraits):
 
     def _day_fired(self):
         self._advance()
-
-    def _em_default(self):
-        em = EventManager()
-        return em
 
     def _fire_history_default(self):
         return np.zeros((history_length, ), dtype=float)
@@ -224,9 +213,6 @@ class ForestView(HasTraits):
         }
         return trait_to_histogram[self.which_histogram]
 
-    def _hb_default(self):
-        return Heartbeat(interval=0.005, event_manager=self.em)
-
     def _histograms_default(self):
         plot = Plot(self.plot_data)
         plot.plot(["fractions", "density_function"], color="green")
@@ -249,17 +235,23 @@ class ForestView(HasTraits):
 
     def _run_changed(self):
         if self.run:
-            self.em.connect(HeartbeatEvent, self.hb_listener)
+            self.timer.Start()
         else:
-            self.em.disconnect(HeartbeatEvent, self.hb_listener)
+            self.timer.Stop()
 
     def _run_default(self):
-        self.hb.serve()
+        self.timer = Timer(150, self._timer_tick)
         return False
 
     def _time_plots_default(self):
         return VPlotContainer(self.fire_time_plot, self.tree_time_plot,
                               self.histograms, spacing=0.)
+
+    def _timer_tick(self):
+        if not self.run:
+            raise StopIteration
+        else:
+            self._advance()
 
     def _tree_history_default(self):
         return np.zeros((history_length, ), dtype=float)
