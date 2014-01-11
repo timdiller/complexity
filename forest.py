@@ -37,10 +37,6 @@ class Forest(HasTraits):
         self.start_fires()
         self.burn_trees()
 
-    def grow_trees(self):
-        growth_sites = randbool(self.size_x, self.size_y, self.p_sapling)
-        self.forest_trees[growth_sites] = True
-
     def burn_trees(self):
         fires = np.zeros((self.size_x + 2, self.size_y + 2), dtype=bool)
         fires[1:-1, 1:-1] = self.forest_fires
@@ -51,6 +47,10 @@ class Forest(HasTraits):
         new_fires = (north | south | east | west) & self.forest_trees
         self.forest_trees[self.forest_fires] = False
         self.forest_fires = new_fires
+
+    def grow_trees(self):
+        growth_sites = randbool(self.size_x, self.size_y, self.p_sapling)
+        self.forest_trees[growth_sites] = True
 
     def start_fires(self):
         lightning_strikes = randbool(self.size_x, self.size_y,
