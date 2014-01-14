@@ -1,8 +1,8 @@
 language: python
 python:
-  - "3.3"
+  # - "3.3"
   - "2.7"
-  - "2.6"
+  # - "2.6"
 virtualenv:
   # This allows installing PyQt using apt-get and being able to import it.
   system_site_packages: true
