@@ -12,6 +12,10 @@ before_install:
 # install dependencies
 install:
   - pip install nose
+  - pip install unittest2
+  - sudo apt-get python-numpy
+  - sudo apt-get python-scipy
+  - sudo apt-get python-enable
   # - pip install numpy
   # - pip install scipy
   - pip install traits
