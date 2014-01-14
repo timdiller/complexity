@@ -17,6 +17,8 @@ install:
   - pip install traits
   - pip install traitsui
   - pip install pyface
+  - pip install enable
+  - pip install chaco
 # run tests
 script:
   - nosetests
