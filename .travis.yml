@@ -16,12 +16,9 @@ install:
   - sudo apt-get install python-numpy
   - sudo apt-get install python-scipy
   - sudo apt-get install python-enable
-  # - pip install numpy
-  # - pip install scipy
   - pip install traits
   - pip install traitsui
   - pip install pyface
-  # - pip install enable
   - pip install chaco
 # run tests
 script:
