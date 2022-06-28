@@ -22,7 +22,7 @@ edm shell -e complexity
 ```
 - Install the dependencies
 ```
-edm install numpy scipy traitsui chaco pyqt
+edm install numpy scipy traitsui chaco pyqt5
 ```
 - Launch the app
 ```
